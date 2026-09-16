@@ -1,0 +1,17 @@
+[project]
+name = "ac-prodlocal"
+version = "0.2.0"
+description = "Asistentes de productividad local: LLM (Gemma/Ollama) + OCR (PaddleOCR-VL) y más"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "flask>=3.1.3",
+    "requests>=2.34.2",
+]
+
+[project.optional-dependencies]
+# Instalar con: uv pip install -e ".[ocr]"
+# Requiere CUDA 12.6+ para GPU; para CPU cambiar paddlepaddle-gpu por paddlepaddle
+ocr = [
+    "paddleocr[doc-parser]>=3.6.0",
+]

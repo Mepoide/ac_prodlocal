@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jira Task Builder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <script src="/static/js/app.js" defer></script>
+</head>
+<body>
+<!-- Background Ambient Glow Blobs -->
+<div class="glow-blob glow-blob-1"></div>
+<div class="glow-blob glow-blob-2"></div>
+
+<div id="app">
+
+  <!-- ── HEADER ── -->
+  <div id="header">
+    <div class="brand-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
+        <rect x="3" y="3" width="18" height="18" rx="3"/>
+        <path d="M9 9h6M9 12h6M9 15h4"/>
+      </svg>
+    </div>
+    
+    <div class="brand-info-container">
+      <select id="agent-select" class="brand-title agent-select" onchange="onAgentChange()">
+        <option value="">Cargando agentes...</option>
+      </select>
+      <div class="status-wrapper" id="ollama-status-wrapper">
+        <div class="brand-status" onclick="toggleOllamaDropdown(event)">
+          <div id="status-dot"></div>
+          <span id="status-text">Iniciando...</span>
+          <svg class="chevron-down" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+        
+        <!-- Ollama Dropdown Panel -->
+        <div id="ollama-dropdown" class="dropdown-panel">
+          <div class="dropdown-header">
+            <span>Servidor Ollama</span>
+            <span class="status-badge" id="ollama-conn-badge">Comprobando</span>
+          </div>
+          <div class="dropdown-info">
+            <div class="info-row">
+              <span class="info-lbl">Dirección URL:</span>
+              <span class="info-val" id="ollama-val-url">-</span>
+            </div>
+            <div class="info-row">
+              <span class="info-lbl">Modelo Activo:</span>
+              <span class="info-val highlight" id="ollama-val-model">-</span>
+            </div>
+          </div>
+          <div class="dropdown-divider"></div>
+          <div class="dropdown-title">Modelos disponibles localmente:</div>
+          <ul class="models-list" id="ollama-models-list">
+            <li class="loading-models">Cargando modelos de Ollama...</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div id="tabs">
+      <button class="tab-btn active" onclick="switchTab('chat')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        Conversación
+      </button>
+      <button class="tab-btn" onclick="switchTab('task')">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+        </svg>
+        Tarea <span id="task-badge">✓</span>
+      </button>
+    </div>
+
+    <div class="header-actions">
+      <!-- Theme Toggle -->
+      <button id="btn-theme" onclick="toggleTheme()" title="Cambiar Tema">
+        <svg class="theme-icon sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <svg class="theme-icon moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="display:none;">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+
+      <!-- Restart Button -->
+      <button id="btn-restart" onclick="restart()">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+          <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-5.36"/>
+        </svg>
+        Nueva
+      </button>
+    </div>
+  </div>
+
+  <!-- ── WORKSPACE PANELS ── -->
+  <div id="workspace">
+    <!-- ── CHAT PANEL ── -->
+    <div id="panel-chat" class="panel active">
+      <div id="banner">
+        <span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" style="vertical-align:middle;margin-right:6px">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          ¡Ficha de Jira completada con éxito!
+        </span>
+        <button id="banner-goto" onclick="switchTab('task')">Ver Tarea →</button>
+      </div>
+
+      <div id="messages"></div>
+
+      <div id="chips">
+        <button class="chip" onclick="sendChip('Sí')">Sí</button>
+        <button class="chip" onclick="sendChip('No')">No</button>
+        <button class="chip" onclick="sendChip('Ninguna')">Ninguna</button>
+        <button class="chip" onclick="sendChip('Generar tarea')">Generar tarea</button>
+        <button class="chip" onclick="sendChip('Añadir más detalles')">Añadir más detalles</button>
+      </div>
+
+      <div id="input-bar">
+        <input id="input" type="text" placeholder="Escribe tu respuesta..."
+               onkeydown="handleKey(event)" oninput="syncSend()" disabled>
+        <button id="btn-send" onclick="submit()" disabled>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- ── OCR DROP ZONE (solo visible cuando agente_type == "ocr") ── -->
+      <div id="ocr-zone" style="display:none">
+        <label id="ocr-drop" for="ocr-file-input"
+               ondragover="ocrDragOver(event)" ondragleave="ocrDragLeave(event)" ondrop="ocrDrop(event)">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <span id="ocr-drop-label">Arrastra una imagen o PDF aquí, o haz clic para seleccionar</span>
+          <input type="file" id="ocr-file-input" accept="image/*,.pdf"
+                 style="display:none" onchange="ocrFileSelected(event)">
+        </label>
+        <div id="ocr-progress" style="display:none">
+          <div class="ocr-spinner"></div>
+          <span>Procesando con PaddleOCR-VL...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TASK PANEL ── -->
+    <div id="panel-task" class="panel">
+      <!-- Task Empty / Stepper state -->
+      <div id="task-empty">
+        <div class="stepper-card-header">
+          <div class="stepper-title">Requisitos del Ticket</div>
+          <p class="stepper-subtitle">Responde a las preguntas del asistente ágil para estructurar la tarea.</p>
+          
+          <div class="progress-container">
+            <div class="progress-bar">
+              <div class="progress-bar-fill" id="progress-fill" style="width: 0%"></div>
+            </div>
+            <div class="progress-stats">
+              <span class="progress-percentage" id="progress-percentage">0%</span>
+              <span class="progress-count" id="progress-count">0 de 10 completados</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="stepper-steps" id="stepper-steps">
+          <div class="step-item" id="step-1" data-step="1">
+            <div class="step-circle">1</div>
+            <div class="step-body">
+              <h4 class="step-label">Tipo de Tarea</h4>
+              <p class="step-desc">Épica, Historia de Usuario, Tarea Técnica, etc.</p>
+            </div>
+          </div>
+          <div class="step-item" id="step-2" data-step="2">
+            <div class="step-circle">2</div>
+            <div class="step-body">
+              <h4 class="step-label">Título Breve</h4>
+              <p class="step-desc">Resumen descriptivo y conciso.</p>
+            </div>
+          </div>
+          <div class="step-item" id="step-3" data-step="3">
+            <div class="step-circle">3</div>
+            <div class="step-body">
+              <h4 class="step-label">Objetivo y Valor</h4>
+              <p class="step-desc">¿Qué valor de negocio aporta y por qué?</p>
+            </div>
+          </div>
+          <div class="step-item" id="step-4" data-step="4">
+            <div class="step-circle">4</div>
+            <div class="step-body">
+              <h4 class="step-label">Alcance (Incluye)</h4>
+              <p class="step-desc">¿Qué entregables específicos abarca?</p>
+            </div>
+          </div>
+          <div class="step-item" id="step-5" data-step="5">
+            <div class="step-circle">5</div>
+            <div class="step-body">
+              <h4 class="step-label">Exclusiones</h4>
+              <p class="step-desc">¿Qué queda fuera del alcance explícitamente?</p>
+            </div>
+          </div>
+          <div class="step-item" id="step-6" data-step="6">
+            <div class="step-circle">6</div>
+            <div class="step-body">
+              <h4 class="step-label">Entregables (Output)</h4>
+              <p class="step-desc">Entregables concretos (solo Épica e HU).</p>
+            </div>
+          </div>
+          <div class="step-item" id="step-7" data-step="7">
+            <div class="step-circle">7</div>
+            <div class="step-body">
+              <h4 class="step-label">Criterios de Aceptación / DoD</h4>
+              <p class="step-desc">Definición de "Terminado" (DoD).</p>
+            </div>
+          </div>
+          <div class="step-item" id="step-8" data-step="8">
+            <div class="step-circle">8</div>
+            <div class="step-body">
+              <h4 class="step-label">Dependencias</h4>
+              <p class="step-desc">Restricciones de integración o flujos previos.</p>
+            </div>
+          </div>
+          <div class="step-item" id="step-9" data-step="9">
+            <div class="step-circle">9</div>
+            <div class="step-body">
+              <h4 class="step-label">Riesgos o Bloqueos</h4>
+              <p class="step-desc">Amenazas conocidas o contingencias necesarias.</p>
+            </div>
+          </div>
+          <div class="step-item" id="step-10" data-step="10">
+            <div class="step-circle">10</div>
+            <div class="step-body">
+              <h4 class="step-label">Contexto del Trabajo</h4>
+              <p class="step-desc">Sprint, Épica padre o referencias generales.</p>
+            </div>
+          </div>
+        </div>
+        
+        <button class="eb mobile-only-btn" onclick="switchTab('chat')">Ir a la Conversación →</button>
+      </div>
+
+      <!-- Task Ready state -->
+      <div id="task-ready">
+        <div id="task-hdr">
+          <div class="thl">
+            <div class="chk-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+            <span class="thl-title">Tarea Generada</span>
+            <span class="thl-badge">Lista para Jira</span>
+          </div>
+          
+          <div class="task-mode-selector">
+            <button class="task-mode-btn active" id="btn-mode-preview" onclick="switchTaskView('preview')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+              </svg>
+              Ficha
+            </button>
+            <button class="task-mode-btn" id="btn-mode-raw" onclick="switchTaskView('raw')">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+              </svg>
+              Markdown
+            </button>
+          </div>
+
+          <button id="btn-copy" onclick="copyTask()">
+            <svg id="copy-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <rect x="9" y="9" width="13" height="13" rx="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            <span id="copy-label">Copiar markdown</span>
+          </button>
+        </div>
+        
+        <!-- Rendered formatted view -->
+        <div id="task-preview-container" class="task-content-panel active">
+          <div id="task-rendered" class="jira-ticket-view"></div>
+        </div>
+
+        <!-- Raw Markdown view -->
+        <div id="task-pre-container" class="task-content-panel">
+          <pre id="task-pre"></pre>
+        </div>
+
+        <div id="task-ftr">
+          <button class="fbtn fbtn-back" onclick="switchTab('chat')">← Volver al chat</button>
+          <button class="fbtn fbtn-new" onclick="restart()">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round">
+              <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-5.36"/>
+            </svg>
+            Nueva tarea
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
