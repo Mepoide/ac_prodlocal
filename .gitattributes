@@ -1,0 +1,5 @@
+# Keep the GitHub language bar showing the Python app, not the
+# static frontend assets or the dependency lockfile.
+app/static/** linguist-vendored
+app/templates/** linguist-vendored
+uv.lock linguist-vendored
